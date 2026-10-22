@@ -1,5 +1,5 @@
 /**
- * 应用主入口 —— 初始化各模块并绑定工具栏事件
+ * 应用主入口 —— 初始化各模块并绑定交互
  */
 document.addEventListener('DOMContentLoaded', () => {
   const calendar = new Calendar();
@@ -11,10 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const theme = new ThemeManager();
   const views = new ViewManager(calendar, renderer);
   const aiSummary = new AiSummaryController(calendar);
+  const search = new SearchController();
+  const shortcuts = new ShortcutManager({});
 
   const notesArea = document.getElementById('notes-area');
   const eventList = document.getElementById('event-list');
   const noteDateLabel = document.getElementById('note-date-label');
+  const eventDateLabel = document.getElementById('event-date-label');
+  const mobileTitle = document.getElementById('mobile-title');
 
   // ── 当前选中的日期（全局唯一来源）
   let selectedDate = new Date(
@@ -28,34 +32,34 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderEventList(date) {
     if (!eventList) return;
     const events = getEventsForDate(date).slice().sort((a, b) => {
-      return (a.start.hour * 60 + a.start.minute) -
-        (b.start.hour * 60 + b.start.minute);
+      return (a.start.hour * 60 + a.start.minute)
+        - (b.start.hour * 60 + b.start.minute);
     });
 
     if (!events.length) {
-      eventList.innerHTML = '<p class="text-sm text-[var(--muted)]">当天暂无日程</p>';
+      eventList.innerHTML = '<p class="empty-tip">当天暂无日程</p>';
       return;
     }
 
     let html = '';
     for (const ev of events) {
       html += '<div class="event-item" data-uid="' + escapeHtml(ev.uid) + '">';
-      html += '<div class="event-time">' +
-        pad2(ev.start.hour) + ':' + pad2(ev.start.minute) +
-        '<span class="event-dash">-</span>' +
-        pad2(ev.end.hour) + ':' + pad2(ev.end.minute) + '</div>';
+      html += '<div class="event-time">'
+        + pad2(ev.start.hour) + ':' + pad2(ev.start.minute)
+        + '<span class="event-dash">-</span>'
+        + pad2(ev.end.hour) + ':' + pad2(ev.end.minute) + '</div>';
       html += '<div class="event-body">';
       html += '<div class="event-title">' + escapeHtml(ev.summary) + '</div>';
       if (ev.location) {
-        html += '<div class="event-loc"><i class="fa fa-map-marker-alt mr-1"></i>' +
-          escapeHtml(ev.location) + '</div>';
+        html += '<div class="event-loc"><i class="fa fa-map-marker-alt mr-1"></i>'
+          + escapeHtml(ev.location) + '</div>';
       }
       if (ev.imported) {
         html += '<div class="event-tag">导入</div>';
       }
       html += '</div>';
-      html += '<button class="event-del" data-uid="' + escapeHtml(ev.uid) +
-        '" title="删除该日程"><i class="fa fa-times"></i></button>';
+      html += '<button class="event-del" data-uid="' + escapeHtml(ev.uid)
+        + '" title="删除该日程"><i class="fa fa-times"></i></button>';
       html += '</div>';
     }
     eventList.innerHTML = html;
@@ -78,18 +82,20 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function onSelectDate(date) {
     selectedDate = date;
-    if (noteDateLabel) {
-      noteDateLabel.textContent = views.formatCn(date).replace(' 星期', ' 周');
-    }
+    const cn = views.formatCn(date);
+    if (noteDateLabel) noteDateLabel.textContent = cn.replace(' 星期', ' 周');
+    if (eventDateLabel) eventDateLabel.textContent = cn.replace(' 星期', ' 周');
+    if (mobileTitle) mobileTitle.textContent = cn;
     renderEventList(date);
   }
 
-  // 让 renderer 在选中日期时回调
   renderer.onSelectDate = onSelectDate;
+
+  // 切视图前把视图焦点对齐到当前选中日期
+  views.onBeforeSwitch = () => views.syncFocus(selectedDate);
 
   // ── 演示数据模式：?demo=1
   // 仅用于生成 README 里的界面截图，正常使用不会触发。
-  // 放在恢复上次选中日期「之前」，这样截图不受历史数据干扰。
   if (/[?&]demo=1\b/.test(location.search)) {
     seedDemoData();
   }
@@ -112,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /**
    * 灌入演示数据（仅 ?demo=1 时调用）
-   * 覆盖当前月份，日期相对「今天」计算，所以任何时候打开都有内容
+   * 覆盖当前月份，日期相对「今天」计算，任何时候打开都有内容
    */
   function seedDemoData() {
     const now = new Date();
@@ -150,8 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
         start: { hour: 19, minute: 0 }, end: { hour: 21, minute: 0 },
       }),
     ]);
-
-    // 今天也放一条，截图时日视图能看到时间轴
     mk(now.getDate(), [
       createEvent({
         summary: '秋招现场：校招双选会', location: '西校区体育馆',
@@ -177,15 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   }
 
-  // ── 视图切换
-  document.querySelectorAll('.view-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // 切换前把视图焦点对齐到当前选中日期，
-      // 否则会出现「刚点完 15 号，切周视图却跳到别处」
-      views.syncFocus(selectedDate);
-      views.setMode(btn.dataset.view);
-    });
-  });
+  // ── 视图切换由 ViewManager 内部统一处理（views.js 的 bind()）
+  //    这里不再重复绑定，否则一次点击会触发两次 setMode
 
   // ── 上一期 / 下一期 / 今天
   document.getElementById('prev-period').addEventListener('click', () => {
@@ -205,7 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
     views.goToday();
     onSelectDate(views.focusDate);
   });
-  // ── 文件操作：笔记
+
+  // ── 笔记文件操作
   document.getElementById('save-btn').addEventListener('click', () => {
     const dateStr = formatLocalDate(selectedDate);
     FileHandler.saveTextToFile(notesArea.value, `${dateStr}_笔记.txt`);
@@ -226,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ── 文件操作：.ics 日程
+  // ── .ics 日程
   document.getElementById('import-ics-btn').addEventListener('click', () => {
     FileHandler.loadIcsFile((content, filename) => {
       const result = importIcsEvents(content);
@@ -238,8 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ? result.days[0]
         : `${result.days.length} 天`;
       window.alert(
-        `已导入 ${result.imported} 条日程（${dayMsg}）\n` +
-        `来自文件：${filename || '未命名'}`
+        `已导入 ${result.imported} 条日程（${dayMsg}）\n来自文件：${filename || '未命名'}`
       );
       views.render();
       onSelectDate(selectedDate);
@@ -272,16 +269,16 @@ document.addEventListener('DOMContentLoaded', () => {
     eventLocation.value = '';
     eventError.classList.add('hidden');
     eventModal.classList.remove('hidden');
-    eventModal.classList.add('opacity-100', 'pointer-events-auto');
     eventTitle.focus();
   }
 
   function closeEventModal() {
     eventModal.classList.add('hidden');
-    eventModal.classList.remove('opacity-100', 'pointer-events-auto');
   }
 
   document.getElementById('add-event-btn').addEventListener('click', openEventModal);
+  const mobileAddBtn = document.getElementById('mobile-add-btn');
+  if (mobileAddBtn) mobileAddBtn.addEventListener('click', openEventModal);
   document.getElementById('event-cancel').addEventListener('click', closeEventModal);
   document.getElementById('event-cancel-2').addEventListener('click', closeEventModal);
 
@@ -320,6 +317,49 @@ document.addEventListener('DOMContentLoaded', () => {
     views.render();
   });
 
+  // ── 移动端侧边栏抽屉
+  const sidebar = document.getElementById('sidebar');
+  const menuToggle = document.getElementById('menu-toggle');
+  if (menuToggle && sidebar) {
+    menuToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+    document.querySelector('.main-area').addEventListener('click', () => {
+      sidebar.classList.remove('open');
+    });
+  }
+
+  // ── 搜索：点结果跳到那天
+  search.onJump = (date) => {
+    calendar.year = date.getFullYear();
+    calendar.month = date.getMonth();
+    views.focusDate = date;
+    views.syncFocus(date);
+    views.setMode('day');
+    onSelectDate(date);
+    notesArea.value = renderer.getNoteForDate(date) || '';
+  };
+
+  // ── 键盘快捷键
+  shortcuts.actions = {
+    today: () => {
+      renderer.saveCurrentNote();
+      views.goToday();
+      onSelectDate(views.focusDate);
+    },
+    setView: (mode) => {
+      views.syncFocus(selectedDate);
+      views.setMode(mode);
+    },
+    shift: (delta) => {
+      renderer.saveCurrentNote();
+      views.shift(delta);
+      onSelectDate(views.focusDate);
+    },
+    newEvent: openEventModal,
+    openSearch: () => search.open(),
+  };
+
   // ── 页面关闭前强制保存，防止最后 1 秒内的输入丢失
   window.addEventListener('beforeunload', () => {
     renderer.saveCurrentNote();
@@ -335,13 +375,13 @@ document.addEventListener('DOMContentLoaded', () => {
       day: 'numeric',
       weekday: 'long',
     });
-    document.getElementById('current-date').textContent = text;
-    document.getElementById('footer-date').textContent = text;
+    const el = document.getElementById('current-date');
+    if (el) el.textContent = text;
   }
 
   // 暴露到全局，便于在控制台调试
   window.calendarApp = {
-    calendar, renderer, dateJump, theme, views, aiSummary,
+    calendar, renderer, dateJump, theme, views, aiSummary, search, shortcuts,
     getSelectedDate: () => selectedDate,
   };
 });
