@@ -22,6 +22,9 @@ function makeStorage() {
     setItem: (k, v) => map.set(k, String(v)),
     removeItem: (k) => map.delete(k),
     clear: () => map.clear(),
+    // key(i) + length：SearchController 靠它们遍历全部条目
+    key: (i) => Array.from(map.keys())[i] ?? null,
+    get length() { return map.size; },
     _map: map,
   };
 }
@@ -38,7 +41,8 @@ const {
   countEventsInMonth, hasEventsOn, importIcsEvents, exportIcsForDate,
   buildMonthlyContext, buildSummaryPrompt, requestSummary, getConfiguredApiKey,
 } = loadScript(
-  ['js/calendar.js', 'js/ics.js', 'js/event-store.js', 'js/ai-summary.js'],
+  ['js/calendar.js', 'js/ics.js', 'js/event-store.js', 'js/ai-summary.js',
+   'js/views.js', 'js/search.js', 'js/shortcuts.js'],
   [
     'Calendar', 'formatLocalDate',
     'escapeIcsText', 'unescapeIcsText', 'foldIcsLine',
@@ -47,6 +51,7 @@ const {
     'countEventsInMonth', 'hasEventsOn', 'importIcsEvents', 'exportIcsForDate',
     'buildMonthlyContext', 'buildSummaryPrompt',
     'requestSummary', 'getConfiguredApiKey',
+    'SearchController', 'ShortcutManager', 'escapeHtml',
   ]
 );
 
@@ -748,5 +753,92 @@ describe('AI 摘要 · 错误处理', () => {
     } finally {
       globalThis.fetch = orig;
     }
+  });
+});
+
+
+// ═══════════════════════════════════════════════════════════
+// 工具函数与搜索
+// ═══════════════════════════════════════════════════════════
+
+describe('pad2 · 补零', () => {
+  it('个位数补前导零', () => {
+    expect(pad2(0)).toBe('00');
+    expect(pad2(5)).toBe('05');
+    expect(pad2(23)).toBe('23');
+    expect(pad2(60)).toBe('60');
+  });
+});
+
+describe('SearchController.scan · 全量扫描', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('空关键词返回空数组', () => {
+    expect(SearchController.scan('')).toEqual([]);
+    expect(SearchController.scan('   ')).toEqual([]);
+  });
+
+  it('能搜到笔记', () => {
+    localStorage.setItem('calendar_note_2026-10-15', '今天做了知识库切片');
+    const hits = SearchController.scan('切片');
+    expect(hits.length).toBe(1);
+    expect(hits[0].type).toBe('note');
+    expect(hits[0].date).toBe('2026-10-15');
+    expect(hits[0].snippet).toContain('知识库切片');
+  });
+
+  it('能搜到日程（标题 / 地点 / 描述都算）', () => {
+    saveEventsForDate(new Date(2026, 9, 20), [createEvent({
+      summary: '项目评审',
+      location: '线上会议',
+      description: '讨论检索质量',
+      start: { hour: 14, minute: 0 },
+      end: { hour: 15, minute: 0 },
+    })]);
+
+    expect(SearchController.scan('评审').length).toBe(1);
+    expect(SearchController.scan('线上会议').length).toBe(1);
+    expect(SearchController.scan('检索质量').length).toBe(1);
+  });
+
+  it('大小写不敏感', () => {
+    localStorage.setItem('calendar_note_2026-10-15', 'Python and LangChain');
+    expect(SearchController.scan('python').length).toBe(1);
+    expect(SearchController.scan('LANGCHAIN').length).toBe(1);
+  });
+
+  it('搜不到时返回空数组', () => {
+    localStorage.setItem('calendar_note_2026-10-15', '无关内容');
+    expect(SearchController.scan('不存在的东西').length).toBe(0);
+  });
+
+  it('结果按日期倒序', () => {
+    localStorage.setItem('calendar_note_2026-10-10', '报告甲');
+    localStorage.setItem('calendar_note_2026-10-20', '报告乙');
+    const hits = SearchController.scan('报告');
+    expect(hits.length).toBe(2);
+    expect(hits[0].date).toBe('2026-10-20');
+    expect(hits[1].date).toBe('2026-10-10');
+  });
+});
+
+
+// ═══════════════════════════════════════════════════════════
+// 快捷键：纯逻辑部分（输入框判断 / 弹窗状态判断）
+// ═══════════════════════════════════════════════════════════
+
+describe('ShortcutManager.isTyping · 纯逻辑', () => {
+  it('输入类元素返回 true', () => {
+    const mgr = Object.create(ShortcutManager.prototype);
+    expect(mgr.isTyping({ tagName: 'INPUT' })).toBe(true);
+    expect(mgr.isTyping({ tagName: 'textarea' })).toBe(true);
+    expect(mgr.isTyping({ tagName: 'DIV', isContentEditable: true })).toBe(true);
+  });
+
+  it('非输入元素与空值返回 false', () => {
+    const mgr = Object.create(ShortcutManager.prototype);
+    expect(mgr.isTyping({ tagName: 'DIV' })).toBe(false);
+    expect(mgr.isTyping({ tagName: 'DIV', isContentEditable: undefined })).toBe(false);
+    expect(mgr.isTyping(null)).toBe(false);
   });
 });

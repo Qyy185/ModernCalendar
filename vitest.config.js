@@ -19,6 +19,8 @@ export default defineConfig({
         'js/views.js',        // 强依赖 DOM
         'js/theme.js',        // 依赖 DOM
         'js/file-handler.js', // 依赖 DOM
+        'js/shortcuts.js',    // 键盘事件依赖 DOM，纯逻辑部分已单独测
+        'js/search.js',       // 渲染依赖 DOM，scan 纯逻辑已单独测
       ],
     },
   },
