@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>现代日历应用 · Modern Calendar</title>
+  <meta name="description" content="基于原生 JavaScript 与 Tailwind CSS 的现代日历应用，支持月视图浏览、日期跳转、按日笔记与 localStorage 持久化。" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>" />
+
+  <!-- Tailwind CSS v3 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3b82f6',
+            accent: '#f59e0b',
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+  />
+
+  <!-- 自定义样式 -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="bg-gray-50 text-gray-800 antialiased">
+
+  <!-- ── 顶部标题栏 ───────────────────────────────────── -->
+  <header class="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
+      <div class="flex items-center">
+        <i class="fa fa-calendar text-2xl md:text-3xl mr-3"></i>
+        <h1 class="text-xl md:text-3xl font-bold text-shadow">现代日历应用</h1>
+      </div>
+      <p id="current-date" class="text-sm md:text-base opacity-90 text-right"></p>
+    </div>
+  </header>
+
+  <!-- ── 工具栏 ───────────────────────────────────────── -->
+  <nav class="max-w-7xl mx-auto px-4 md:px-8 mt-6">
+    <div class="flex flex-wrap gap-2 md:gap-4 items-center justify-between">
+
+      <!-- 导航类 -->
+      <div class="flex flex-wrap gap-2 md:gap-3">
+        <button id="prev-month"
+          class="btn bg-blue-500 hover:bg-blue-600 text-white"
+          title="上一月">
+          <i class="fa fa-chevron-left mr-2"></i>上一月
+        </button>
+        <button id="next-month"
+          class="btn bg-blue-500 hover:bg-blue-600 text-white"
+          title="下一月">
+          下一月<i class="fa fa-chevron-right ml-2"></i>
+        </button>
+        <button id="today-btn"
+          class="btn bg-amber-500 hover:bg-amber-600 text-white"
+          title="回到今天">
+          <i class="fa fa-sun mr-2"></i>今天
+        </button>
+        <button id="jump-btn"
+          class="btn bg-purple-500 hover:bg-purple-600 text-white"
+          title="跳转到指定日期">
+          <i class="fa fa-crosshairs mr-2"></i>跳转日期
+        </button>
+      </div>
+
+      <!-- 文件类 -->
+      <div class="flex flex-wrap gap-2 md:gap-3">
+        <button id="save-btn"
+          class="btn bg-emerald-500 hover:bg-emerald-600 text-white"
+          title="导出为 txt 文件">
+          <i class="fa fa-download mr-2"></i>保存
+        </button>
+        <button id="open-btn"
+          class="btn bg-gray-500 hover:bg-gray-600 text-white"
+          title="导入 txt 文件">
+          <i class="fa fa-upload mr-2"></i>打开
+        </button>
+        <button id="clear-btn"
+          class="btn bg-red-500 hover:bg-red-600 text-white"
+          title="清空当前日期的笔记">
+          <i class="fa fa-trash mr-2"></i>清空
+        </button>
+      </div>
+
+    </div>
+  </nav>
+
+  <!-- ── 主内容区 ─────────────────────────────────────── -->
+  <main class="max-w-7xl mx-auto px-4 md:px-8 mt-6 pb-4">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- 日历区域 -->
+      <section class="lg:col-span-2 bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3">
+          <h2 id="calendar-title" class="text-lg font-bold"></h2>
+        </div>
+
+        <!-- 星期标题栏 -->
+        <div class="grid grid-cols-7 bg-gray-100 text-gray-600 text-sm font-bold">
+          <div class="py-2 text-center">日</div>
+          <div class="py-2 text-center">一</div>
+          <div class="py-2 text-center">二</div>
+          <div class="py-2 text-center">三</div>
+          <div class="py-2 text-center">四</div>
+          <div class="py-2 text-center">五</div>
+          <div class="py-2 text-center">六</div>
+        </div>
+
+        <!-- 日期网格 -->
+        <div id="calendar-grid" class="grid grid-cols-7 gap-2 p-4"></div>
+      </section>
+
+      <!-- 笔记区域 -->
+      <section class="bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="bg-gray-100 text-gray-700 px-4 py-3">
+          <h2 class="text-lg font-bold">
+            <i class="fa fa-sticky-note mr-2"></i>笔记
+          </h2>
+        </div>
+        <div class="p-4">
+          <textarea id="notes-area"
+            class="w-full h-[300px] md:h-[400px] lg:h-96 p-4 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none resize-none"
+            placeholder="在这里添加你的笔记..."></textarea>
+          <p class="text-xs text-gray-500 mt-2">
+            <i class="fa fa-circle-info mr-1"></i>
+            选中日期后输入，停止输入 1 秒自动保存到本地
+          </p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ── 底部状态栏 ───────────────────────────────────── -->
+  <footer class="max-w-7xl mx-auto px-4 md:px-8 py-4">
+    <div class="text-center text-gray-500 text-sm">
+      <p>© 2025 现代日历应用 · 软件开发课程设计</p>
+      <p id="footer-date" class="mt-1"></p>
+    </div>
+  </footer>
+
+  <!-- ── 日期跳转弹窗 ─────────────────────────────────── -->
+  <div id="jump-modal"
+    class="hidden fixed inset-0 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-200 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
+      <div class="flex items-center justify-between px-5 py-4 border-b">
+        <h3 class="text-lg font-bold text-gray-800">
+          <i class="fa fa-crosshairs mr-2 text-purple-500"></i>日期跳转
+        </h3>
+        <button id="jump-cancel"
+          class="text-gray-400 hover:text-gray-600 text-xl leading-none"
+          title="关闭">&times;</button>
+      </div>
+
+      <div class="px-5 py-5">
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label for="jump-year" class="block text-sm text-gray-600 mb-1">年</label>
+            <input id="jump-year" type="number" min="1900" max="2100"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" />
+          </div>
+          <div>
+            <label for="jump-month" class="block text-sm text-gray-600 mb-1">月</label>
+            <input id="jump-month" type="number" min="1" max="12"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" />
+          </div>
+          <div>
+            <label for="jump-day" class="block text-sm text-gray-600 mb-1">日</label>
+            <input id="jump-day" type="number" min="1" max="31"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" />
+          </div>
+        </div>
+        <p id="jump-error" class="hidden mt-3 text-sm text-red-600"></p>
+      </div>
+
+      <div class="px-5 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-lg">
+        <button id="jump-cancel-2"
+          class="btn bg-gray-300 hover:bg-gray-400 text-gray-800"
+          onclick="document.getElementById('jump-modal').classList.add('hidden'); document.getElementById('jump-modal').classList.remove('opacity-100','pointer-events-auto');">
+          取消
+        </button>
+        <button id="jump-confirm"
+          class="btn bg-purple-500 hover:bg-purple-600 text-white">
+          确认跳转
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 脚本 -->
+  <script src="js/calendar.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/file-handler.js"></script>
+  <script src="js/date-jump.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

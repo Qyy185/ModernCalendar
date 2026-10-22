@@ -1,0 +1,127 @@
+/* ============================================================
+   现代日历应用 · 自定义样式
+   Tailwind 负责绝大部分布局与配色，此处补充 Tailwind 之外
+   的细节：按钮微动效、日期格子过渡、跳转震动反馈。
+   ============================================================ */
+
+body {
+  min-height: 100vh;
+}
+
+/* ── 按钮：hover 上移 2px，active 复位 ────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+@media (min-width: 768px) {
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+  }
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* ── 日期格子 ─────────────────────────────────────────── */
+.calendar-day {
+  min-width: 40px;
+  font-size: 0.875rem;
+  border: 2px solid transparent;
+  background-color: #ffffff;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .calendar-day {
+    font-size: 1rem;
+  }
+}
+
+.calendar-day:hover:not(.is-today):not(.is-selected) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ── 今日：蓝色底 + 蓝色边框 ─────────────────────────────
+   这些状态样式全部用自定义类，且不写 !important。
+   原因：Tailwind CDN 版在运行时注入样式表，其工具类与自定义类
+   同特异性时按注入顺序生效，!important + var() 组合还可能整体失效。
+   彻底的做法是：日期格子的背景/边框一律不碰 Tailwind 工具类。 */
+.calendar-day.is-today {
+  background-color: #dbeafe;   /* blue-100 */
+  border-color: #3b82f6;       /* blue-500 */
+  font-weight: 700;
+}
+
+/* ── 选中：橙色底 + 橙色边框 ─────────────────────────── */
+.calendar-day.is-selected {
+  background-color: #ffedd5;   /* orange-100 */
+  border-color: #f97316;       /* orange-500 */
+}
+
+/* ── 跳转目标：橙色底 + 箭头标记 ─────────────────────── */
+.calendar-day.is-jumped {
+  background-color: #ffedd5;
+  border-color: #f97316;
+}
+
+.calendar-day.is-jumped::after {
+  content: '→';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 11px;
+  color: #f97316;
+  font-weight: 700;
+}
+
+/* ── 跳转目标日期的震动反馈（500ms 内左右位移） ───────── */
+.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+/* ── 文本阴影（用于顶部标题） ─────────────────────────── */
+.text-shadow {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ── 滚动条美化 ───────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
