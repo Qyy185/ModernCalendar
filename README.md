@@ -7,12 +7,34 @@
 一个零依赖、零构建的现代日历应用。打开 `index.html` 就能用，不需要服务器、不需要打包。
 
 [![CI](https://github.com/zhaoyuezhao/ModernCalendar/actions/workflows/ci.yml/badge.svg)](https://github.com/zhaoyuezhao/ModernCalendar/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-60%20passed-brightgreen.svg)](https://github.com/zhaoyuezhao/ModernCalendar)
-[![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen.svg)](https://github.com/zhaoyuezhao/ModernCalendar)
+[![Tests](https://img.shields.io/badge/tests-69%20passed-brightgreen.svg)](https://github.com/zhaoyuezhao/ModernCalendar)
+[![Coverage](https://img.shields.io/badge/coverage-81%25-brightgreen.svg)](https://github.com/zhaoyuezhao/ModernCalendar)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![No deps](https://img.shields.io/badge/runtime%20deps-0-success.svg)](package.json)
 
 ![界面截图](docs/screenshot-desktop.png)
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshot-week.png" alt="周视图"></td>
+<td width="50%"><img src="docs/screenshot-day-dark.png" alt="日视图 · 深色"></td>
+</tr>
+<tr>
+<td align="center"><b>周视图</b>——七列并排，每格列出当天日程</td>
+<td align="center"><b>日视图 · 深色模式</b>——时间轴排列</td>
+</tr>
+<tr>
+<td colspan="2" align="center"><img src="docs/screenshot-search.png" alt="全文搜索" style="max-width:66%"></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><b>全文搜索</b>——<code>/</code> 唤起，跨笔记与日程检索</td>
+</tr>
+</table>
+
+> **项目说明**：本项目最初是三人合作的软件开发课程设计（2025 秋）。
+> **v2 由 邹晔铖 主导重构** —— 界面重做、架构拆分、补齐单元测试与 CI、
+> 新增三视图 / 日程 / 深色模式 / 搜索 / AI 摘要 / RFC 5545 日历互导。
+> 原课程设计文档见 git 历史 v1 版本。
 
 ---
 
@@ -20,15 +42,16 @@
 
 | 模块 | 说明 |
 |---|---|
-| **三视图日历** | 月 / 周 / 日三种视图自由切换，共享同一个选中日期；有日程的日子显示圆点标记 |
-| **日期跳转** | 输入年/月/日跳转到任意日期，非法日期（如 2 月 30 日）会被拦截并提示 |
-| **按日笔记** | 选中日期写笔记，**停止输入 1 秒自动保存**；可导出为 `.txt`、可导入回填 |
-| **日程事件** | 一天可挂多条日程（时间区间 + 标题 + 地点），周/日视图按时间轴排列 |
-| **.ics 导入导出** | 导入标准日历文件（RFC 5545），导出后可直接进手机 / 系统日历 |
-| **AI 月度摘要** | 把当月笔记交给通义千问，生成一份月度回顾 |
-| **深色模式** | CSS 变量驱动，偏好记入 localStorage，刷新后保持 |
-| **本地持久化** | `localStorage` 存储，刷新不丢；二次确认后才可清空 |
-| **响应式** | 320px 手机到 1920px 桌面自适应，小屏自动改为上下布局 |
+| **三视图日历** | 月 / 周 / 日自由切换，共享同一个选中日期；月视图格子里**直接显示日程条** |
+| **日期跳转** | 输入年/月/日跳到任意日期，非法日期（如 2 月 30 日）被拦截并提示 |
+| **按日笔记** | 停止输入 1 秒自动保存；可导出 `.txt`、可导入回填 |
+| **日程事件** | 一天可挂多条（时间区间 + 标题 + 地点），周/日视图按时间轴排列 |
+| **.ics 导入导出** | 完整实现 RFC 5545，导出后可直接进手机 / 系统日历 |
+| **AI 月度摘要** | 把当月笔记交给通义千问生成回顾，无 Key 时优雅降级 |
+| **深色模式** | CSS 变量驱动，偏好记入 localStorage |
+| **全文搜索** | `/` 唤起，跨笔记与日程检索，命中可一键跳转 |
+| **键盘快捷键** | `T` 今天 · `M/W/D` 切视图 · `←→` 翻页 · `N` 新增 · `/` 搜索 |
+| **响应式** | 桌面为侧边栏工作台，手机自动收成抽屉；320px 起可用 |
 
 ---
 
@@ -69,7 +92,7 @@ CI 配置在 `.github/workflows/ci.yml`，每次 push 自动跑测试 + 语法�
 
 ## 架构
 
-八个模块，职责单一，通过实例关联协作，改一处不影响另一处：
+十个模块，职责单一，通过实例关联协作，改一处不影响另一处：
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -80,8 +103,10 @@ CI 配置在 `.github/workflows/ci.yml`，每次 push 自动跑测试 + 语法�
 │  ├─ DateJump          跳转控制 + 日期合法性校验         │
 │  ├─ ViewManager       月 / 周 / 日三视图                │
 │  ├─ ThemeManager      深浅色主题切换                    │
-│  ├─ EventStore        日程事件的数据层（读写 localStorage）│
-│  └─ AiSummary         AI 月度摘要（可降级）              │
+│  ├─ EventStore        日程事件的数据层                  │
+│  ├─ AiSummary         AI 月度摘要（可降级）              │
+│  ├─ SearchController  全文搜索（笔记 + 日程）           │
+│  └─ ShortcutManager   键盘快捷键                       │
 │                                                          │
 │  ics.js  RFC 5545 日历文件解析与生成（纯函数）          │
 └────────────────────────────────────────────────────────┘
@@ -89,17 +114,19 @@ CI 配置在 `.github/workflows/ci.yml`，每次 push 自动跑测试 + 语法�
 
 | 文件 | 职责 |
 |---|---|
-| `js/calendar.js` | 日期计算：天数、首日星期、月份切换、网格数据生成；`formatLocalDate` 工具 |
+| `js/calendar.js` | 日期计算：天数、首日星期、月份切换、网格数据生成；`formatLocalDate` / `pad2` 工具 |
 | `js/ics.js` | RFC 5545 解析与生成：转义、折行、日期时间解析、往返一致性 |
 | `js/event-store.js` | 日程事件 CRUD、`.ics` 导入导出、按月统计 |
-| `js/renderer.js` | 日历网格渲染、选中高亮、笔记读写、自动保存定时器 |
+| `js/renderer.js` | 日历网格渲染（含格内日程条）、选中高亮、笔记读写、自动保存定时器 |
 | `js/file-handler.js` | Blob 导出、FileReader 导入（txt / ics） |
 | `js/date-jump.js` | 模态框交互、日期合法性校验、跳转执行 |
-| `js/views.js` | 月 / 周 / 日三视图渲染与切换、焦点日期管理 |
+| `js/views.js` | 三视图渲染与切换、焦点日期管理 |
 | `js/theme.js` | 深浅色主题，CSS 变量 + localStorage 记忆 |
 | `js/ai-summary.js` | AI 月度摘要：上下文组装、Prompt 构造、接口调用与降级 |
-| `js/app.js` | 初始化、工具栏事件绑定、页面卸载前兜底保存 |
-| `css/style.css` | CSS 变量主题、按钮微动效、日期格子状态、周/日视图样式、震动反馈 |
+| `js/search.js` | 全文搜索：扫 localStorage，命中渲染与跳转 |
+| `js/shortcuts.js` | 键盘快捷键：输入框不拦截、弹窗只响应 Esc |
+| `js/app.js` | 初始化、事件绑定、页面卸载前兜底保存 |
+| `css/style.css` | CSS 变量主题、侧边栏布局、日期格子状态、三视图样式、响应式 |
 
 **分层原则**：纯逻辑（日期计算、ics 解析、上下文组装）不碰 DOM，可以直接跑单元测试；
 只有渲染与交互层依赖浏览器。
@@ -108,7 +135,7 @@ CI 配置在 `.github/workflows/ci.yml`，每次 push 自动跑测试 + 语法�
 
 ## 测试
 
-`tests/unit.test.js` 一个文件，60 个用例，覆盖核心逻辑：
+`tests/unit.test.js` 一个文件，69 个用例，覆盖核心逻辑：
 
 | 测试组 | 覆盖内容 |
 |---|---|
@@ -118,6 +145,8 @@ CI 配置在 `.github/workflows/ci.yml`，每次 push 自动跑测试 + 语法�
 | **ics · 生成** | CRLF 行尾、结构完整、生成→解析往返一致、**与旅游项目双向互导** |
 | **EventStore** | 事件 CRUD、月份统计、`.ics` 导入去重（全日事件）、导出往返 |
 | **AI 摘要** | 上下文组装（只收有笔记的日期、不跨月）、Prompt 构造、401/429/500/空响应各类降级、请求体格式 |
+| **搜索** | 笔记与日程都能搜到、标题/地点/描述都参与匹配、大小写不敏感、结果按日期倒序 |
+| **快捷键** | 输入框识别（不在打字时误触发快捷键） |
 
 **覆盖率**（`npm run coverage`）：
 
@@ -126,8 +155,10 @@ CI 配置在 `.github/workflows/ci.yml`，每次 push 自动跑测试 + 语法�
 | `js/calendar.js` | **100%** |
 | `js/ics.js` | **95.75%** |
 | `js/event-store.js` | **92.59%** |
-| `js/ai-summary.js` | 65.5%（未覆盖部分为 DOM 控制器，需浏览器环境） |
-| **整体** | **86.46%** |
+| **整体（可测部分）** | **80.89%** |
+
+> 依赖 DOM 的模块（渲染层、视图切换、搜索渲染、快捷键事件绑定）不计入统计，
+> 它们的纯逻辑部分单独测了，其余在浏览器端用 CDP 实测。
 
 CI 每次 push 自动跑，覆盖率报告作为 artifact 保留 7 天。
 
