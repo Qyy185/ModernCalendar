@@ -1,0 +1,18 @@
+{
+  "name": "modern-calendar",
+  "version": "2.0.0",
+  "description": "基于原生 JavaScript 与 Tailwind CSS 的现代日历应用，支持月/周/日三视图、按日笔记、日程事件与 .ics 导入导出",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "serve": "python -m http.server 8080"
+  },
+  "keywords": ["calendar", "javascript", "ics", "rfc5545", "localstorage"],
+  "author": "Zou Yuezhao",
+  "license": "MIT",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.8",
+    "vitest": "^2.1.8"
+  }
+}
