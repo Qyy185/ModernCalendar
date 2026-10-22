@@ -17,3 +17,8 @@ desktop.ini
 *.tmp
 *.bak
 ~$*
+
+# 依赖与构建产物
+node_modules/
+coverage/
+.vite/
