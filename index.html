@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>现代日历应用 · Modern Calendar</title>
-  <meta name="description" content="基于原生 JavaScript 与 Tailwind CSS 的现代日历应用，支持月/周/日三视图、按日笔记、日程事件、.ics 导入导出与 AI 月度摘要。" />
+  <title>Modern Calendar · 现代日历</title>
+  <meta name="description" content="月 / 周 / 日三视图日历，支持按日笔记、多条日程、RFC 5545 .ics 导入导出与 AI 月度摘要。原生 JavaScript，零运行时依赖。" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>" />
 
-  <!-- Tailwind CSS v3 -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -17,314 +16,297 @@
           colors: {
             primary: '#3b82f6',
             accent: '#f59e0b',
+            brand: '#0f172a',
           },
         },
       },
     };
   </script>
 
-  <!-- Font Awesome -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
   />
-
-  <!-- 自定义样式 -->
   <link rel="stylesheet" href="css/style.css" />
 </head>
 
-<body class="bg-[var(--bg)] text-[var(--text)] antialiased">
+<body class="app-shell">
 
-  <!-- ── 顶部标题栏 ───────────────────────────────────── -->
-  <header class="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
-    <div class="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-20 flex items-center justify-between gap-3">
-      <div class="flex items-center min-w-0">
-        <i class="fa fa-calendar text-2xl md:text-3xl mr-3 shrink-0"></i>
-        <h1 class="text-xl md:text-3xl font-bold text-shadow truncate">现代日历应用</h1>
-      </div>
-      <div class="flex items-center gap-3 shrink-0">
-        <p id="current-date" class="hidden sm:block text-sm md:text-base opacity-90 text-right"></p>
-        <button id="theme-toggle"
-          class="w-9 h-9 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-          title="切换深色 / 浅色模式">
-          <i id="theme-icon" class="fa fa-moon"></i>
-        </button>
+  <!-- ══════════════ 侧边栏 ══════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark"><i class="fa fa-calendar"></i></div>
+      <div class="brand-text">
+        <h1>现代日历</h1>
+        <p>Modern Calendar</p>
       </div>
     </div>
-  </header>
 
-  <!-- ── 工具栏 ───────────────────────────────────────── -->
-  <nav class="max-w-7xl mx-auto px-4 md:px-8 mt-6">
-    <div class="flex flex-wrap gap-2 md:gap-3 items-center justify-between">
-
-      <!-- 视图切换 -->
-      <div class="flex flex-wrap gap-1 md:gap-2">
-        <div class="view-switch" role="tablist" aria-label="视图切换">
-          <button class="view-btn active" data-view="month" role="tab">月</button>
-          <button class="view-btn" data-view="week" role="tab">周</button>
-          <button class="view-btn" data-view="day" role="tab">日</button>
-        </div>
-      </div>
-
-      <!-- 导航类 -->
-      <div class="flex flex-wrap gap-2 md:gap-3">
-        <button id="prev-period"
-          class="btn bg-blue-500 hover:bg-blue-600 text-white"
-          title="上一月 / 上一周 / 前一天">
-          <i class="fa fa-chevron-left mr-2"></i><span id="prev-label">上一月</span>
+    <!-- 视图切换 -->
+    <nav class="sidebar-nav" aria-label="视图切换">
+      <p class="nav-label">视图</p>
+      <div class="nav-group" role="tablist">
+        <button class="nav-item active" data-view="month" role="tab">
+          <i class="fa fa-calendar-days"></i><span>月</span>
+          <kbd>M</kbd>
         </button>
-        <button id="next-period"
-          class="btn bg-blue-500 hover:bg-blue-600 text-white"
-          title="下一月 / 下一周 / 后一天">
-          <span id="next-label">下一月</span><i class="fa fa-chevron-right ml-2"></i>
+        <button class="nav-item" data-view="week" role="tab">
+          <i class="fa fa-list"></i><span>周</span>
+          <kbd>W</kbd>
         </button>
-        <button id="today-btn"
-          class="btn bg-amber-500 hover:bg-amber-600 text-white"
-          title="回到今天">
-          <i class="fa fa-sun mr-2"></i>今天
-        </button>
-        <button id="jump-btn"
-          class="btn bg-purple-500 hover:bg-purple-600 text-white"
-          title="跳转到指定日期">
-          <i class="fa fa-crosshairs mr-2"></i>跳转日期
+        <button class="nav-item" data-view="day" role="tab">
+          <i class="fa fa-clock"></i><span>日</span>
+          <kbd>D</kbd>
         </button>
       </div>
+    </nav>
 
-      <!-- 文件类 -->
-      <div class="flex flex-wrap gap-2 md:gap-3">
-        <button id="save-btn"
-          class="btn bg-emerald-500 hover:bg-emerald-600 text-white"
-          title="导出当前日期笔记为 txt">
-          <i class="fa fa-download mr-2"></i>保存
+    <!-- 操作 -->
+    <nav class="sidebar-nav" aria-label="操作">
+      <p class="nav-label">操作</p>
+      <div class="nav-group">
+        <button id="add-event-btn" class="nav-item nav-accent">
+          <i class="fa fa-plus"></i><span>新增日程</span>
+          <kbd>N</kbd>
         </button>
-        <button id="open-btn"
-          class="btn bg-gray-500 hover:bg-gray-600 text-white"
-          title="导入 txt 笔记">
-          <i class="fa fa-upload mr-2"></i>打开
+        <button id="import-ics-btn" class="nav-item">
+          <i class="fa fa-file-import"></i><span>导入 .ics</span>
         </button>
-        <button id="import-ics-btn"
-          class="btn bg-teal-500 hover:bg-teal-600 text-white"
-          title="导入 .ics 日历文件（如旅游项目导出的行程）">
-          <i class="fa fa-calendar-plus mr-2"></i>导入日程
+        <button id="export-ics-btn" class="nav-item">
+          <i class="fa fa-file-export"></i><span>导出 .ics</span>
         </button>
-        <button id="export-ics-btn"
-          class="btn bg-indigo-500 hover:bg-indigo-600 text-white"
-          title="导出当前日期日程为 .ics，可导入手机 / 系统日历">
-          <i class="fa fa-calendar-day mr-2"></i>导出日程
+        <button id="open-btn" class="nav-item">
+          <i class="fa fa-file-import"></i><span>导入笔记</span>
         </button>
-        <button id="clear-btn"
-          class="btn bg-red-500 hover:bg-gray-600 text-white"
-          title="清空当前日期的笔记">
-          <i class="fa fa-trash mr-2"></i>清空
+        <button id="save-btn" class="nav-item">
+          <i class="fa fa-file-export"></i><span>导出笔记</span>
+        </button>
+        <button id="clear-btn" class="nav-item nav-danger">
+          <i class="fa fa-trash"></i><span>清空笔记</span>
         </button>
       </div>
+    </nav>
 
+    <!-- 工具 -->
+    <nav class="sidebar-nav sidebar-bottom" aria-label="工具">
+      <div class="nav-group">
+        <button id="theme-toggle" class="nav-item">
+          <i class="fa fa-moon" id="theme-icon"></i><span>深色模式</span>
+        </button>
+        <button id="search-btn" class="nav-item">
+          <i class="fa fa-search"></i><span>搜索</span>
+          <kbd>/</kbd>
+        </button>
+        <button id="shortcut-btn" class="nav-item">
+          <i class="fa fa-keyboard"></i><span>快捷键</span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="sidebar-foot">
+      <p>Originally a team course project</p>
+      <p>v2 redesigned &amp; rebuilt by 邹晔铖</p>
     </div>
-  </nav>
+  </aside>
 
-  <!-- ── 主内容区 ─────────────────────────────────────── -->
-  <main class="max-w-7xl mx-auto px-4 md:px-8 mt-6 pb-4">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- 移动端顶部条 -->
+  <div class="mobile-bar">
+    <button id="menu-toggle" class="mobile-menu-btn" aria-label="打开菜单">
+      <i class="fa fa-bars"></i>
+    </button>
+    <span class="mobile-title" id="mobile-title">现代日历</span>
+    <button id="mobile-add-btn" class="mobile-menu-btn" aria-label="新增日程">
+      <i class="fa fa-plus"></i>
+    </button>
+  </div>
 
-      <!-- 日历区域 -->
-      <section class="lg:col-span-2 bg-[var(--panel)] rounded-xl shadow-md overflow-hidden">
-        <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 flex items-center justify-between">
-          <h2 id="calendar-title" class="text-lg font-bold"></h2>
-          <span id="calendar-subtitle" class="text-sm opacity-90"></span>
+  <!-- ══════════════ 主区 ══════════════ -->
+  <main class="main-area">
+    <header class="main-header">
+      <div class="header-title">
+        <h2 id="calendar-title"></h2>
+        <p id="calendar-subtitle"></p>
+      </div>
+      <div class="header-actions">
+        <span id="current-date" class="header-date"></span>
+        <button id="prev-period" class="icon-btn" title="上一月 / 上一周 / 前一天">
+          <i class="fa fa-chevron-left"></i>
+        </button>
+        <button id="today-btn" class="pill-btn">今天</button>
+        <button id="next-period" class="icon-btn" title="下一月 / 下一周 / 后一天">
+          <i class="fa fa-chevron-right"></i>
+        </button>
+        <span class="header-divider"></span>
+        <button id="jump-btn" class="pill-btn pill-ghost">
+          <i class="fa fa-crosshairs mr-1"></i>跳转
+        </button>
+      </div>
+    </header>
+
+    <div class="content-grid">
+      <!-- 日历 -->
+      <section class="panel panel-calendar">
+        <div id="weekday-header" class="weekday-header">
+          <div>日</div><div>一</div><div>二</div><div>三</div>
+          <div>四</div><div>五</div><div>六</div>
         </div>
-
-        <!-- 星期标题栏（日视图下隐藏） -->
-        <div id="weekday-header" class="grid grid-cols-7 bg-[var(--panel-alt)] text-[var(--muted)] text-sm font-bold">
-          <div class="py-2 text-center">日</div>
-          <div class="py-2 text-center">一</div>
-          <div class="py-2 text-center">二</div>
-          <div class="py-2 text-center">三</div>
-          <div class="py-2 text-center">四</div>
-          <div class="py-2 text-center">五</div>
-          <div class="py-2 text-center">六</div>
-        </div>
-
-        <!-- 日期网格（月视图） -->
-        <div id="calendar-grid" class="grid grid-cols-7 gap-2 p-4"></div>
-
-        <!-- 周视图容器 -->
-        <div id="week-view" class="hidden p-4"></div>
-
-        <!-- 日视图容器 -->
-        <div id="day-view" class="hidden p-4"></div>
+        <div id="calendar-grid" class="calendar-grid"></div>
+        <div id="week-view" class="hidden week-view"></div>
+        <div id="day-view" class="hidden day-view"></div>
       </section>
 
       <!-- 右侧栏 -->
-      <aside class="flex flex-col gap-6">
-
-        <!-- 笔记区域 -->
-        <section class="bg-[var(--panel)] rounded-xl shadow-md overflow-hidden">
-          <div class="bg-[var(--panel-alt)] text-[var(--text)] px-4 py-3 flex items-center justify-between">
-            <h2 class="text-lg font-bold">
-              <i class="fa fa-sticky-note mr-2"></i>笔记
-            </h2>
-            <span id="note-date-label" class="text-xs text-[var(--muted)]"></span>
+      <aside class="side-column">
+        <!-- 日程 -->
+        <section class="panel">
+          <div class="panel-head">
+            <h3><i class="fa fa-calendar-day mr-2"></i>日程</h3>
+            <span id="event-date-label" class="panel-meta"></span>
           </div>
-          <div class="p-4">
-            <textarea id="notes-area"
-              class="w-full h-[240px] md:h-[320px] p-4 border border-[var(--border)] rounded-lg bg-[var(--input)] text-[var(--text)] focus:border-blue-500 focus:outline-none resize-none"
-              placeholder="在这里添加你的笔记..."></textarea>
-            <p class="text-xs text-[var(--muted)] mt-2">
-              <i class="fa fa-circle-info mr-1"></i>
-              选中日期后输入，停止输入 1 秒自动保存到本地
+          <div id="event-list" class="panel-body event-list">
+            <p class="empty-tip">当天暂无日程</p>
+          </div>
+        </section>
+
+        <!-- 笔记 -->
+        <section class="panel">
+          <div class="panel-head">
+            <h3><i class="fa fa-sticky-note mr-2"></i>笔记</h3>
+            <span id="note-date-label" class="panel-meta"></span>
+          </div>
+          <div class="panel-body">
+            <textarea id="notes-area" class="notes-area"
+              placeholder="在这里添加你的笔记…"></textarea>
+            <p class="hint">
+              <i class="fa fa-circle-info mr-1"></i>停止输入 1 秒自动保存到本地
             </p>
           </div>
         </section>
 
-        <!-- 日程事件区域 -->
-        <section class="bg-[var(--panel)] rounded-xl shadow-md overflow-hidden">
-          <div class="bg-[var(--panel-alt)] text-[var(--text)] px-4 py-3 flex items-center justify-between">
-            <h2 class="text-lg font-bold">
-              <i class="fa fa-calendar-day mr-2"></i>日程
-            </h2>
-            <button id="add-event-btn"
-              class="text-xs px-2 py-1 rounded bg-teal-500 hover:bg-teal-600 text-white transition-colors">
-              <i class="fa fa-plus mr-1"></i>新增
-            </button>
+        <!-- AI 摘要 -->
+        <section class="panel">
+          <div class="panel-head">
+            <h3><i class="fa fa-wand-magic-sparkles mr-2 text-purple-400"></i>AI 月度摘要</h3>
           </div>
-          <div id="event-list" class="p-4 space-y-2">
-            <p class="text-sm text-[var(--muted)]">当天暂无日程</p>
+          <div class="panel-body">
+            <p class="hint mb-3">把本月笔记交给通义千问，生成一份月度回顾</p>
+            <button id="ai-summary-btn" class="block-btn">
+              <i class="fa fa-sparkles mr-2"></i>生成摘要
+            </button>
+            <div id="ai-summary-result" class="ai-result hidden"></div>
+            <p id="ai-summary-hint" class="ai-hint hidden"></p>
           </div>
         </section>
-
-        <!-- AI 月度摘要 -->
-        <section class="bg-[var(--panel)] rounded-xl shadow-md overflow-hidden">
-          <div class="bg-[var(--panel-alt)] text-[var(--text)] px-4 py-3 flex items-center justify-between">
-            <h2 class="text-lg font-bold">
-              <i class="fa fa-sparkles mr-2 text-purple-400"></i>AI 月度摘要
-            </h2>
-          </div>
-          <div class="p-4">
-            <p class="text-xs text-[var(--muted)] mb-3">
-              把本月笔记交给通义千问，生成一份月度回顾
-            </p>
-            <button id="ai-summary-btn"
-              class="btn w-full bg-purple-500 hover:bg-purple-600 text-white">
-              <i class="fa fa-wand-magic-sparkles mr-2"></i>生成摘要
-            </button>
-            <div id="ai-summary-result"
-              class="mt-3 text-sm leading-relaxed whitespace-pre-wrap hidden"></div>
-            <p id="ai-summary-hint" class="mt-2 text-xs text-amber-500 hidden"></p>
-          </div>
-        </section>
-
       </aside>
     </div>
+
+    <footer class="main-foot">
+      <span>Originally a team course project · v2 redesigned &amp; rebuilt by 邹晔铖</span>
+    </footer>
   </main>
 
-  <!-- ── 底部状态栏 ───────────────────────────────────── -->
-  <footer class="max-w-7xl mx-auto px-4 md:px-8 py-4">
-    <div class="text-center text-[var(--muted)] text-sm">
-      <p>© 2025 现代日历应用 · 软件开发课程设计</p>
-      <p id="footer-date" class="mt-1"></p>
-    </div>
-  </footer>
-
-  <!-- ── 日期跳转弹窗 ─────────────────────────────────── -->
-  <div id="jump-modal"
-    class="hidden fixed inset-0 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-200 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
-      <div class="flex items-center justify-between px-5 py-4 border-b">
-        <h3 class="text-lg font-bold text-gray-800">
-          <i class="fa fa-crosshairs mr-2 text-purple-500"></i>日期跳转
-        </h3>
-        <button id="jump-cancel"
-          class="text-gray-400 hover:text-gray-600 text-xl leading-none"
-          title="关闭">&times;</button>
+  <!-- ══════════════ 搜索面板 ══════════════ -->
+  <div id="search-panel" class="overlay hidden">
+    <div class="search-box">
+      <div class="search-input-wrap">
+        <i class="fa fa-search"></i>
+        <input id="search-input" type="text" placeholder="搜索笔记与日程…" autocomplete="off" />
+        <button id="search-close" class="icon-btn icon-btn-sm">&times;</button>
       </div>
-
-      <div class="px-5 py-5">
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <label for="jump-year" class="block text-sm text-gray-600 mb-1">年</label>
-            <input id="jump-year" type="number" min="1900" max="2100"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" />
-          </div>
-          <div>
-            <label for="jump-month" class="block text-sm text-gray-600 mb-1">月</label>
-            <input id="jump-month" type="number" min="1" max="12"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" />
-          </div>
-          <div>
-            <label for="jump-day" class="block text-sm text-gray-600 mb-1">日</label>
-            <input id="jump-day" type="number" min="1" max="31"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" />
-          </div>
-        </div>
-        <p id="jump-error" class="hidden mt-3 text-sm text-red-600"></p>
-      </div>
-
-      <div class="px-5 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-lg">
-        <button id="jump-cancel-2"
-          class="btn bg-gray-300 hover:bg-gray-400 text-gray-800">
-          取消
-        </button>
-        <button id="jump-confirm"
-          class="btn bg-purple-500 hover:bg-purple-600 text-white">
-          确认跳转
-        </button>
+      <div id="search-results" class="search-results">
+        <p class="empty-tip">输入关键词开始搜索</p>
       </div>
     </div>
   </div>
 
-  <!-- ── 新增事件弹窗 ─────────────────────────────────── -->
-  <div id="event-modal"
-    class="hidden fixed inset-0 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-200 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
-      <div class="flex items-center justify-between px-5 py-4 border-b">
-        <h3 class="text-lg font-bold text-gray-800">
-          <i class="fa fa-calendar-plus mr-2 text-teal-500"></i>新增日程
-        </h3>
-        <button id="event-cancel"
-          class="text-gray-400 hover:text-gray-600 text-xl leading-none"
-          title="关闭">&times;</button>
+  <!-- ══════════════ 快捷键面板 ══════════════ -->
+  <div id="shortcut-panel" class="overlay hidden">
+    <div class="shortcut-box">
+      <div class="panel-head">
+        <h3><i class="fa fa-keyboard mr-2"></i>键盘快捷键</h3>
+        <button id="shortcut-close" class="icon-btn icon-btn-sm">&times;</button>
       </div>
+      <div class="panel-body">
+        <ul class="shortcut-list">
+          <li><kbd>T</kbd><span>回到今天</span></li>
+          <li><kbd>M</kbd><span>月视图</span></li>
+          <li><kbd>W</kbd><span>周视图</span></li>
+          <li><kbd>D</kbd><span>日视图</span></li>
+          <li><kbd>←</kbd><kbd>→</kbd><span>上一个 / 下一个周期</span></li>
+          <li><kbd>N</kbd><span>新增日程</span></li>
+          <li><kbd>/</kbd><span>搜索</span></li>
+          <li><kbd>Esc</kbd><span>关闭弹窗</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
-      <div class="px-5 py-5 space-y-4">
+  <!-- ══════════════ 日期跳转弹窗 ══════════════ -->
+  <div id="jump-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3><i class="fa fa-crosshairs mr-2 text-purple-500"></i>日期跳转</h3>
+        <button id="jump-cancel" class="icon-btn icon-btn-sm">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label for="jump-year" class="field-label">年</label>
+            <input id="jump-year" type="number" min="1900" max="2100" class="field-input" />
+          </div>
+          <div>
+            <label for="jump-month" class="field-label">月</label>
+            <input id="jump-month" type="number" min="1" max="12" class="field-input" />
+          </div>
+          <div>
+            <label for="jump-day" class="field-label">日</label>
+            <input id="jump-day" type="number" min="1" max="31" class="field-input" />
+          </div>
+        </div>
+        <p id="jump-error" class="field-error hidden"></p>
+      </div>
+      <div class="modal-foot">
+        <button id="jump-cancel-2" class="pill-btn pill-ghost">取消</button>
+        <button id="jump-confirm" class="pill-btn">确认跳转</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ 新增事件弹窗 ══════════════ -->
+  <div id="event-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3><i class="fa fa-calendar-plus mr-2 text-teal-500"></i>新增日程</h3>
+        <button id="event-cancel" class="icon-btn icon-btn-sm">&times;</button>
+      </div>
+      <div class="modal-body space-y-4">
         <div>
-          <label for="event-title" class="block text-sm text-gray-600 mb-1">标题</label>
-          <input id="event-title" type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-            placeholder="例如：甲秀楼" />
+          <label for="event-title" class="field-label">标题</label>
+          <input id="event-title" type="text" class="field-input" placeholder="例如：甲秀楼" />
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="event-start" class="block text-sm text-gray-600 mb-1">开始</label>
-            <input id="event-start" type="time" value="09:00"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" />
+            <label for="event-start" class="field-label">开始</label>
+            <input id="event-start" type="time" value="09:00" class="field-input" />
           </div>
           <div>
-            <label for="event-end" class="block text-sm text-gray-600 mb-1">结束</label>
-            <input id="event-end" type="time" value="10:30"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" />
+            <label for="event-end" class="field-label">结束</label>
+            <input id="event-end" type="time" value="10:30" class="field-input" />
           </div>
         </div>
         <div>
-          <label for="event-location" class="block text-sm text-gray-600 mb-1">地点（可选）</label>
-          <input id="event-location" type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-            placeholder="例如：贵州省贵阳市" />
+          <label for="event-location" class="field-label">地点（可选）</label>
+          <input id="event-location" type="text" class="field-input" placeholder="例如：贵州省贵阳市" />
         </div>
-        <p id="event-error" class="hidden text-sm text-red-600"></p>
+        <p id="event-error" class="field-error hidden"></p>
       </div>
-
-      <div class="px-5 py-4 bg-gray-50 flex justify-end gap-3 rounded-b-lg">
-        <button id="event-cancel-2" class="btn bg-gray-300 hover:bg-gray-400 text-gray-800">
-          取消
-        </button>
-        <button id="event-save" class="btn bg-teal-500 hover:bg-teal-600 text-white">
-          保存
-        </button>
+      <div class="modal-foot">
+        <button id="event-cancel-2" class="pill-btn pill-ghost">取消</button>
+        <button id="event-save" class="pill-btn">保存</button>
       </div>
     </div>
   </div>
 
-  <!-- 脚本 -->
   <script src="js/calendar.js"></script>
   <script src="js/ics.js"></script>
   <script src="js/event-store.js"></script>
@@ -334,6 +316,8 @@
   <script src="js/theme.js"></script>
   <script src="js/views.js"></script>
   <script src="js/ai-summary.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/shortcuts.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
