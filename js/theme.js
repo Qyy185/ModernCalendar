@@ -38,13 +38,18 @@ class ThemeManager {
   /** 应用主题到 DOM */
   apply() {
     document.documentElement.setAttribute('data-theme', this.current);
+
     if (this.iconEl) {
       this.iconEl.classList.toggle('fa-moon', this.current === 'light');
       this.iconEl.classList.toggle('fa-sun', this.current === 'dark');
     }
+
     if (this.toggleBtn) {
-      this.toggleBtn.title =
-        this.current === 'light' ? '切换到深色模式' : '切换到浅色模式';
+      const dark = this.current === 'dark';
+      this.toggleBtn.title = dark ? '切换到浅色模式' : '切换到深色模式';
+      // 按钮上的文字也跟着变，让人知道点一下会切到什么
+      const label = this.toggleBtn.querySelector('span');
+      if (label) label.textContent = dark ? '浅色模式' : '深色模式';
     }
   }
 
