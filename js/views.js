@@ -21,7 +21,11 @@ class ViewManager {
     this.subtitleEl = document.getElementById('calendar-subtitle');
     this.prevLabel = document.getElementById('prev-label');
     this.nextLabel = document.getElementById('next-label');
-    this.buttons = Array.from(document.querySelectorAll('.view-btn'));
+    this.prevBtn = document.getElementById('prev-period');
+    this.nextBtn = document.getElementById('next-period');
+    this.buttons = Array.from(
+      document.querySelectorAll('.nav-item[data-view], .view-btn')
+    );
 
     // 周视图与日视图需要独立的「焦点日期」
     this.focusDate = new Date(
@@ -32,9 +36,17 @@ class ViewManager {
   }
 
   /** 绑定视图切换按钮 */
+  /**
+   * 绑定视图切换按钮
+   *
+   * 切换前要把焦点对齐到「当前选中日期」——
+   * 用户在月视图点了 15 号，切到周视图时应该看到 15 号所在的那一周。
+   * 焦点日期由外部通过 setSelectedDate 同步进来。
+   */
   bind() {
     this.buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
+        if (this.onBeforeSwitch) this.onBeforeSwitch();
         this.setMode(btn.dataset.view);
       });
     });
@@ -93,6 +105,9 @@ class ViewManager {
     const [prev, next] = labels[this.mode];
     if (this.prevLabel) this.prevLabel.textContent = prev;
     if (this.nextLabel) this.nextLabel.textContent = next;
+    // 侧边栏方案里按钮只有图标，语义靠 title 传达
+    if (this.prevBtn) this.prevBtn.title = prev;
+    if (this.nextBtn) this.nextBtn.title = next;
   }
 
   /** 渲染当前视图 */
@@ -157,30 +172,34 @@ class ViewManager {
     const { start } = this.getWeekRange();
     const weekNames = ['一', '二', '三', '四', '五', '六', '日'];
 
-    let html = '<div class="grid grid-cols-7 gap-2">';
+    let html = '<div class="week-grid">';
     for (let i = 0; i < 7; i++) {
       const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-      const events = getEventsForDate(d);
+      const events = getEventsForDate(d).slice().sort((a, b) => {
+        return (a.start.hour * 60 + a.start.minute)
+          - (b.start.hour * 60 + b.start.minute);
+      });
       const isToday =
         d.getFullYear() === new Date().getFullYear() &&
         d.getMonth() === new Date().getMonth() &&
         d.getDate() === new Date().getDate();
       const isSelected = formatLocalDate(d) === formatLocalDate(this.focusDate);
 
-      html += '<div class="week-cell" data-date="' + formatLocalDate(d) + '">';
-      html += '<div class="week-head">';
-      html += '<span class="week-dow">周' + weekNames[i] + '</span>';
-      html += '<span class="week-daynum' + (isToday ? ' is-today' : '') +
-        (isSelected ? ' is-selected' : '') + '">' + d.getDate() + '</span>';
+      html += '<div class="week-col' + (isToday ? ' is-today' : '')
+        + (isSelected ? ' is-selected' : '') + '" data-date="' + formatLocalDate(d) + '">';
+      html += '<div class="week-col-head">';
+      html += '<span class="dow">周' + weekNames[i] + '</span>';
+      html += '<span class="dnum">' + d.getDate() + '</span>';
       html += '</div>';
 
       if (events.length) {
-        html += '<div class="week-events">';
+        html += '<div class="week-col-events">';
         for (const ev of events.slice(0, 4)) {
-          html += '<div class="week-event">' +
-            '<span class="week-event-time">' +
-            pad2(ev.start.hour) + ':' + pad2(ev.start.minute) + '</span> ' +
-            escapeHtml(ev.summary) + '</div>';
+          html += '<div class="day-event-chip" title="'
+            + escapeHtml(ev.summary) + '">'
+            + '<span class="chip-time">'
+            + pad2(ev.start.hour) + ':' + pad2(ev.start.minute) + '</span>'
+            + '<span class="chip-title">' + escapeHtml(ev.summary) + '</span></div>';
         }
         if (events.length > 4) {
           html += '<div class="week-more">+' + (events.length - 4) + ' 更多</div>';
@@ -195,7 +214,7 @@ class ViewManager {
     this.weekEl.innerHTML = html;
 
     // 点击某天 → 切到日视图
-    this.weekEl.querySelectorAll('.week-cell').forEach((cell) => {
+    this.weekEl.querySelectorAll('.week-col').forEach((cell) => {
       cell.addEventListener('click', () => {
         const [y, m, dd] = cell.dataset.date.split('-').map(Number);
         this.focusDate = new Date(y, m - 1, dd);
@@ -291,11 +310,6 @@ class ViewManager {
     const w = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
     return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 星期' + w;
   }
-}
-
-/** 补零 */
-function pad2(n) {
-  return String(n).padStart(2, '0');
 }
 
 /** HTML 转义，防止事件标题里的特殊字符破坏结构 */

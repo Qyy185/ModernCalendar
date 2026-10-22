@@ -37,39 +37,74 @@ class CalendarRenderer {
 
     calendarData.forEach((day) => {
       const dayEl = document.createElement('div');
-      dayEl.className = 'calendar-day flex items-center justify-center rounded-lg aspect-ratio-1';
+      dayEl.className = 'day-cell';
 
       if (day.type === 'empty') {
         dayEl.classList.add('is-empty');
       } else {
         const dateObj = new Date(this.calendar.year, this.calendar.month, day.value);
-        const events = getEventsForDate(dateObj);
+        const events = getEventsForDate(dateObj)
+          .slice()
+          .sort((a, b) => (a.start.hour * 60 + a.start.minute)
+            - (b.start.hour * 60 + b.start.minute));
 
-        // 有日程的日子显示小圆点标记
-        if (events.length) {
-          dayEl.classList.add('has-events');
-          const dot = document.createElement('span');
-          dot.className = 'event-dot';
-          dot.title = events.length + ' 个日程';
-          dayEl.appendChild(dot);
-        }
-
-        // 日期数字单独包一层，便于叠放圆点
+        // 日期数字
         const num = document.createElement('span');
         num.className = 'day-num';
         num.textContent = day.value;
         dayEl.appendChild(num);
+
+        // 格子内直接显示日程条（Google 日历的做法）：
+        // 不用点进去才知道当天有什么
+        const maxChips = this.maxChips();
+        events.slice(0, maxChips).forEach((ev) => {
+          const chip = document.createElement('div');
+          chip.className = 'day-event-chip';
+          chip.title = `${pad2(ev.start.hour)}:${pad2(ev.start.minute)} `
+            + `${ev.summary}${ev.location ? ' · ' + ev.location : ''}`;
+
+          const t = document.createElement('span');
+          t.className = 'chip-time';
+          t.textContent = `${pad2(ev.start.hour)}:${pad2(ev.start.minute)}`;
+          chip.appendChild(t);
+
+          const title = document.createElement('span');
+          title.className = 'chip-title';
+          title.textContent = ev.summary;
+          chip.appendChild(title);
+
+          dayEl.appendChild(chip);
+        });
+
+        if (events.length > maxChips) {
+          const more = document.createElement('div');
+          more.className = 'day-more';
+          more.textContent = `+${events.length - maxChips} 更多`;
+          dayEl.appendChild(more);
+        }
+
         dayEl.dataset.day = day.value;
 
         if (day.isToday) {
           dayEl.classList.add('is-today');
         } else {
-          dayEl.classList.add('is-day', 'hover:bg-gray-100', 'cursor-pointer', 'transition-all');
           dayEl.addEventListener('click', () => this.handleDayClick(day.value, dayEl));
         }
       }
       this.container.appendChild(dayEl);
     });
+  }
+
+  /**
+   * 格子内最多显示几条日程
+   * 视口越宽格子越高，能显示的越多
+   * @returns {number} 条数上限
+   */
+  maxChips() {
+    const w = window.innerWidth;
+    if (w < 760) return 1;
+    if (w < 1100) return 2;
+    return 3;
   }
 
   /**

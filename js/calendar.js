@@ -20,6 +20,11 @@ function formatLocalDate(date) {
   return `${y}-${m}-${d}`;
 }
 
+/** 补零：把数字格式化成两位字符串（09:05） */
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
 class Calendar {
   constructor() {
     this.currentDate = new Date();          // 当前系统日期
