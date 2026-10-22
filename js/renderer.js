@@ -40,9 +40,25 @@ class CalendarRenderer {
       dayEl.className = 'calendar-day flex items-center justify-center rounded-lg aspect-ratio-1';
 
       if (day.type === 'empty') {
-        dayEl.classList.add('bg-gray-50');
+        dayEl.classList.add('is-empty');
       } else {
-        dayEl.textContent = day.value;
+        const dateObj = new Date(this.calendar.year, this.calendar.month, day.value);
+        const events = getEventsForDate(dateObj);
+
+        // 有日程的日子显示小圆点标记
+        if (events.length) {
+          dayEl.classList.add('has-events');
+          const dot = document.createElement('span');
+          dot.className = 'event-dot';
+          dot.title = events.length + ' 个日程';
+          dayEl.appendChild(dot);
+        }
+
+        // 日期数字单独包一层，便于叠放圆点
+        const num = document.createElement('span');
+        num.className = 'day-num';
+        num.textContent = day.value;
+        dayEl.appendChild(num);
         dayEl.dataset.day = day.value;
 
         if (day.isToday) {
@@ -76,6 +92,9 @@ class CalendarRenderer {
     document.getElementById('notes-area').value = note || '';
 
     this.setSelectedDate(selectedDate);
+
+    // 通知外部：选中日期变了（更新右侧栏的日期标签与日程列表）
+    this.onSelectDate && this.onSelectDate(selectedDate);
   }
 
   /** 绑定笔记自动保存：输入停止 1 秒后写入 localStorage */

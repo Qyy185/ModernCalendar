@@ -123,9 +123,13 @@ class DateJump {
       targetEl.classList.add('shake');
       this.renderer.selectedDayEl = targetEl;
 
-      const note = this.renderer.getNoteForDate(new Date(year, month - 1, day));
+      const targetDate = new Date(year, month - 1, day);
+      const note = this.renderer.getNoteForDate(targetDate);
       document.getElementById('notes-area').value = note || '';
-      this.renderer.setSelectedDate(new Date(year, month - 1, day));
+      this.renderer.setSelectedDate(targetDate);
+
+      // 通知外部：跳转改变了选中日期（同步右侧栏与视图焦点）
+      this.renderer.onSelectDate && this.renderer.onSelectDate(targetDate);
     }
 
     this.closeModal();

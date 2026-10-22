@@ -1,17 +1,55 @@
 /* ============================================================
    现代日历应用 · 自定义样式
-   Tailwind 负责绝大部分布局与配色，此处补充 Tailwind 之外
-   的细节：按钮微动效、日期格子过渡、跳转震动反馈。
+
+   颜色统一走 CSS 变量：浅色 / 深色只换 <html> 的 data-theme，
+   组件样式不用关心当前主题。
    ============================================================ */
+
+/* ── 主题变量 ───────────────────────────────────────── */
+:root,
+[data-theme='light'] {
+  --bg: #f9fafb;
+  --panel: #ffffff;
+  --panel-alt: #f3f4f6;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --input: #ffffff;
+  --day-bg: #ffffff;
+  --day-empty: #f9fafb;
+  --day-hover: #f3f4f6;
+  --event-bg: #ccfbf1;
+  --event-border: #14b8a6;
+  --event-text: #0f766e;
+}
+
+[data-theme='dark'] {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --panel-alt: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #475569;
+  --input: #0f172a;
+  --day-bg: #1e293b;
+  --day-empty: #172033;
+  --day-hover: #334155;
+  --event-bg: #134e4a;
+  --event-border: #2dd4bf;
+  --event-text: #99f6e4;
+}
 
 body {
   min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--text);
 }
 
 /* ── 按钮：hover 上移 2px，active 复位 ────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   font-size: 0.875rem;
@@ -37,13 +75,52 @@ body {
   transform: translateY(0);
 }
 
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── 视图切换按钮组 ─────────────────────────────────── */
+.view-switch {
+  display: inline-flex;
+  background: var(--panel-alt);
+  border-radius: 0.5rem;
+  padding: 3px;
+  gap: 2px;
+}
+
+.view-btn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.view-btn:hover {
+  color: var(--text);
+}
+
+.view-btn.active {
+  background: var(--panel);
+  color: #3b82f6;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 /* ── 日期格子 ─────────────────────────────────────────── */
 .calendar-day {
+  position: relative;
   min-width: 40px;
   font-size: 0.875rem;
   border: 2px solid transparent;
-  background-color: #ffffff;
-  position: relative;
+  background-color: var(--day-bg);
+  color: var(--text);
 }
 
 @media (min-width: 768px) {
@@ -52,31 +129,87 @@ body {
   }
 }
 
-.calendar-day:hover:not(.is-today):not(.is-selected) {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.calendar-day.is-empty {
+  background-color: var(--day-empty);
 }
 
-/* ── 今日：蓝色底 + 蓝色边框 ─────────────────────────────
-   这些状态样式全部用自定义类，且不写 !important。
-   原因：Tailwind CDN 版在运行时注入样式表，其工具类与自定义类
-   同特异性时按注入顺序生效，!important + var() 组合还可能整体失效。
-   彻底的做法是：日期格子的背景/边框一律不碰 Tailwind 工具类。 */
+.calendar-day.is-day {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.calendar-day.is-day:hover {
+  background-color: var(--day-hover);
+}
+
+.day-num {
+  position: relative;
+  z-index: 1;
+}
+
+/* 有日程的日子：右下角小圆点 */
+.event-dot {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background-color: var(--event-border);
+  box-shadow: 0 0 0 1.5px var(--day-bg);
+  z-index: 2;
+}
+
+/* 选中态与今日态下，圆点描边要跟着变，否则会糊在一起 */
+.calendar-day.is-selected .event-dot {
+  box-shadow: 0 0 0 1.5px #ffedd5;
+}
+
+[data-theme='dark'] .calendar-day.is-selected .event-dot {
+  box-shadow: 0 0 0 1.5px #7c2d12;
+}
+
+.calendar-day.is-today .event-dot {
+  box-shadow: 0 0 0 1.5px #dbeafe;
+}
+
+[data-theme='dark'] .calendar-day.is-today .event-dot {
+  box-shadow: 0 0 0 1.5px #1e3a8a;
+}
+
+/* 今日：蓝色底 + 蓝色边框 */
 .calendar-day.is-today {
-  background-color: #dbeafe;   /* blue-100 */
-  border-color: #3b82f6;       /* blue-500 */
+  background-color: #dbeafe;
+  border-color: #3b82f6;
   font-weight: 700;
+  color: #1e3a8a;
 }
 
-/* ── 选中：橙色底 + 橙色边框 ─────────────────────────── */
+[data-theme='dark'] .calendar-day.is-today {
+  background-color: #1e3a8a;
+  color: #dbeafe;
+}
+
+/* 选中：橙色底 + 橙色边框 */
 .calendar-day.is-selected {
-  background-color: #ffedd5;   /* orange-100 */
-  border-color: #f97316;       /* orange-500 */
+  background-color: #ffedd5;
+  border-color: #f97316;
+  color: #9a3412;
 }
 
-/* ── 跳转目标：橙色底 + 箭头标记 ─────────────────────── */
+[data-theme='dark'] .calendar-day.is-selected {
+  background-color: #7c2d12;
+  color: #ffedd5;
+}
+
+/* 跳转目标：橙色底 + 箭头标记 */
 .calendar-day.is-jumped {
   background-color: #ffedd5;
   border-color: #f97316;
+}
+
+[data-theme='dark'] .calendar-day.is-jumped {
+  background-color: #7c2d12;
 }
 
 .calendar-day.is-jumped::after {
@@ -87,6 +220,236 @@ body {
   font-size: 11px;
   color: #f97316;
   font-weight: 700;
+}
+
+/* ── 周视图 ───────────────────────────────────────────── */
+.week-cell {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.35rem;
+  min-height: 150px;
+  cursor: pointer;
+  background-color: var(--day-bg);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.week-cell:hover {
+  border-color: #3b82f6;
+}
+
+.week-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.35rem;
+}
+
+.week-dow {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.week-daynum {
+  font-size: 1rem;
+  font-weight: 600;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  border-radius: 9999px;
+}
+
+.week-daynum.is-today {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+.week-daynum.is-selected {
+  background-color: #f97316;
+  color: #ffffff;
+}
+
+.week-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.week-event {
+  font-size: 0.68rem;
+  line-height: 1.35;
+  background-color: var(--event-bg);
+  color: var(--event-text);
+  border-left: 2px solid var(--event-border);
+  border-radius: 3px;
+  padding: 1px 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.week-event-time {
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.week-more {
+  font-size: 0.65rem;
+  color: var(--muted);
+  padding-left: 3px;
+}
+
+.week-empty {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+  padding-top: 0.5rem;
+  opacity: 0.5;
+}
+
+/* ── 日视图 ───────────────────────────────────────────── */
+.day-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.875rem;
+  padding: 2.5rem 0;
+}
+
+.day-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.day-event {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: var(--panel-alt);
+  border-left: 3px solid var(--event-border);
+}
+
+.day-event-time {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--event-text);
+  white-space: nowrap;
+  min-width: 88px;
+}
+
+.day-event-dash {
+  margin: 0 3px;
+  opacity: 0.6;
+}
+
+.day-event-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-event-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.day-event-loc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.day-event-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+
+.day-event-tag {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background-color: var(--event-bg);
+  color: var(--event-text);
+}
+
+/* ── 右侧日程列表 ─────────────────────────────────────── */
+.event-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.5rem;
+  background-color: var(--event-bg);
+  border-left: 3px solid var(--event-border);
+}
+
+.event-time {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--event-text);
+  white-space: nowrap;
+  min-width: 78px;
+}
+
+.event-dash {
+  margin: 0 2px;
+  opacity: 0.6;
+}
+
+.event-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.event-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.event-loc {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.event-tag {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 0.6rem;
+  padding: 0 4px;
+  border-radius: 3px;
+  background-color: var(--event-border);
+  color: #ffffff;
+}
+
+.event-del {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.event-del:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
 }
 
 /* ── 跳转目标日期的震动反馈（500ms 内左右位移） ───────── */
