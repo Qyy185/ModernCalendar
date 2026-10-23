@@ -7,7 +7,14 @@
   <meta name="description" content="月 / 周 / 日三视图日历，支持按日笔记、多条日程、RFC 5545 .ics 导入导出与 AI 月度摘要。原生 JavaScript，零运行时依赖。" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>" />
 
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind 已本地化（vendor-tailwind.js）：现场 WiFi 不稳时仍能正常渲染，避免白屏 -->
+  <script src="vendor-tailwind.js"></script>
+  <script>
+    // 若本地脚本加载失败，回退到 CDN
+    if (typeof tailwind === 'undefined') {
+      document.write('<script src="https://cdn.tailwindcss.com"><\/script>');
+    }
+  </script>
   <script>
     tailwind.config = {
       darkMode: ['class', '[data-theme="dark"]'],
@@ -23,10 +30,8 @@
     };
   </script>
 
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-  />
+  <!-- Font Awesome 已本地化（css/fontawesome.min.css + vendor/fontawesome/*.woff2） -->
+  <link rel="stylesheet" href="css/fontawesome.min.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 
