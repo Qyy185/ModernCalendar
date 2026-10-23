@@ -6,9 +6,9 @@
 
 一个零依赖、零构建的现代日历应用。打开 `index.html` 就能用，不需要服务器、不需要打包。
 
-[![CI](https://github.com/zhaoyuezhao/ModernCalendar/actions/workflows/ci.yml/badge.svg)](https://github.com/zhaoyuezhao/ModernCalendar/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-69%20passed-brightgreen.svg)](https://github.com/zhaoyuezhao/ModernCalendar)
-[![Coverage](https://img.shields.io/badge/coverage-81%25-brightgreen.svg)](https://github.com/zhaoyuezhao/ModernCalendar)
+[![CI](https://github.com/Qyy185/ModernCalendar/actions/workflows/ci.yml/badge.svg)](https://github.com/Qyy185/ModernCalendar/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-69%20passed-brightgreen.svg)](https://github.com/Qyy185/ModernCalendar)
+[![Coverage](https://img.shields.io/badge/coverage-81%25-brightgreen.svg)](https://github.com/Qyy185/ModernCalendar)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![No deps](https://img.shields.io/badge/runtime%20deps-0-success.svg)](package.json)
 
