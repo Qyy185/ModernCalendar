@@ -1394,7 +1394,7 @@ kbd {
 
 </style>
 
-  <!-- 移动端优化：安全区适配 + 禁止双击缩放 -->
+  <!-- 移动端优化：安全区适配 + 防止横向溢出 -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="现代日历" />
@@ -1402,14 +1402,40 @@ kbd {
   <style>
     /* iOS 安全区，避免刘海遮挡顶部工具栏 */
     body { padding-top: env(safe-area-inset-top); }
-    /* 移动端禁止双指缩放导致的布局错乱 */
+    /* 禁止双击缩放导致的布局错乱 */
     html { touch-action: manipulation; }
-    /* 移动端：侧边栏改为顶部横向滚动条 */
+    /* 移动端：日历网格等比缩小，保证一周七天都在屏内
+       根因链：.content-grid 是 grid-template-columns: minmax(0,1fr) 320px，
+       窄屏下仍强行分两栏，320px 那列把主区挤出屏外；
+       而 .calendar-grid 的 repeat(7,1fr) 里 grid 项默认 min-width:auto，
+       内容会撑破轨道。三处都要改。 */
     @media (max-width: 768px) {
-      .sidebar { width: 100% !important; height: auto !important;
-                 position: relative !important; flex-direction: row !important;
-                 overflow-x: auto !important; }
-      .sidebar > * { flex-shrink: 0; }
+      /* 1) 单栏：右侧栏落到主区下方 */
+      .content-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 12px !important;
+      }
+      /* 2) 主区不再被固定 padding 撑开 */
+      .main-area { padding-left: 12px !important; padding-right: 12px !important; }
+      /* 3) 网格轨道真正等分 */
+      .panel-calendar { overflow: hidden !important; }
+      #calendar-grid, .calendar-grid {
+        width: 100% !important;
+        min-width: 0 !important;
+      }
+      #calendar-grid > *, .calendar-grid > * {
+        min-width: 0 !important;
+        overflow: hidden !important;
+      }
+      .calendar-grid .day-num,
+      .calendar-grid .dnum,
+      .calendar-grid .day-head,
+      .calendar-grid .dow {
+        font-size: 10px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
   </style>
 </head>
