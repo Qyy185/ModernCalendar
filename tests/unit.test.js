@@ -56,7 +56,7 @@ const {
 );
 
 /**
- * 旅游项目 core/ical.py 生成的真实格式样本
+ * 真实日历应用生成的 .ics 格式样本
  * 包含：
  *   · PRODID / METHOD / X-WR-CALNAME 等日历级字段
  *   · floating time 的 DTSTART / DTEND（不带 Z、不带 TZID）
@@ -75,7 +75,7 @@ const TRAVEL_ICS = [
   'DTSTART:20261023T093000',
   'DTEND:20261023T113000',
   'SUMMARY:甲秀楼',
-  'DESCRIPTION:第1天 · 贵阳行程（由智慧旅游规划助手生成）',
+  'DESCRIPTION:第1天 · 贵阳行程（由日程规划工具生成）',
   'LOCATION:贵阳',
   'END:VEVENT',
   'BEGIN:VEVENT',
@@ -84,7 +84,7 @@ const TRAVEL_ICS = [
   'DTSTART:20261024T140000',
   'DTEND:20261024T160000',
   'SUMMARY:黔灵山公园;含\\;避暑\\;门票',
-  'DESCRIPTION:第2天 · 贵阳行程（由智慧旅游规划助手生成）',
+  'DESCRIPTION:第2天 · 贵阳行程（由日程规划工具生成）',
   'LOCATION:贵阳',
   'END:VEVENT',
   'END:VCALENDAR',
@@ -293,7 +293,7 @@ describe('ics · 日期时间解析', () => {
 });
 
 describe('ics · 解析事件', () => {
-  it('解析旅游项目导出的 .ics', () => {
+  it('解析外部日历应用导出的 .ics', () => {
     const events = parseIcs(TRAVEL_ICS);
     expect(events.length).toBe(2);
 
@@ -314,7 +314,7 @@ describe('ics · 解析事件', () => {
   it('DESCRIPTION 完整保留', () => {
     const events = parseIcs(TRAVEL_ICS);
     expect(events[0].description).toContain('第1天');
-    expect(events[0].description).toContain('智慧旅游规划助手');
+    expect(events[0].description).toContain('日程规划工具');
   });
 
   it('兼容 LF 行尾', () => {
@@ -404,8 +404,8 @@ describe('ics · 生成', () => {
     expect(parsed[1].summary).toBe(original[1].summary);
   });
 
-  it('与旅游项目互导：旅游项目导出的能被本项目解析并原样再导出', () => {
-    // 解析旅游项目的文件
+  it('与外部日历应用互导：外部导出的能被本项目解析并原样再导出', () => {
+    // 解析外部日历应用导出的文件
     const fromTravel = parseIcs(TRAVEL_ICS);
     expect(fromTravel.length).toBe(2);
 
@@ -506,7 +506,7 @@ describe('EventStore · 基础读写', () => {
 describe('EventStore · .ics 导入', () => {
   beforeEach(() => localStorage.clear());
 
-  it('导入旅游项目的 .ics，按日期分组写入', () => {
+  it('导入外部日历应用的 .ics，按日期分组写入', () => {
     const result = importIcsEvents(TRAVEL_ICS);
     expect(result.imported).toBe(2);
     expect(result.days.sort()).toEqual(['2026-10-23', '2026-10-24']);
